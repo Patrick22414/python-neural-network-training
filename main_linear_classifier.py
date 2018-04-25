@@ -1,6 +1,5 @@
 import numpy as np
-import cifar_10
-import crossent
+from util import cifar_10, crossent
 import time
 
 n_pixel = 3072 + 1

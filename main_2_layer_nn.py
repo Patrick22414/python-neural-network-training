@@ -1,6 +1,5 @@
 import numpy as np
-import cifar_10
-import fc_layer
+from util import cifar_10, fc_layer
 import time
 
 n_pixel = 3072

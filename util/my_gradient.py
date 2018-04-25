@@ -1,6 +1,6 @@
 """These are really bad codes written when I first started learning Python and Neural Nets, please ignore them"""
 import numpy as np
-import my_loss
+from util import my_loss
 
 
 def gradient_check(loss_f, w, x, y):
