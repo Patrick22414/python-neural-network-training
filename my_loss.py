@@ -1,3 +1,4 @@
+"""These are codes written when I first started learning Python and Neural Nets, please ignore them"""
 import numpy as np
 
 
