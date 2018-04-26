@@ -17,7 +17,7 @@ batch[4] = cifar_10.unpickle("data_batch_5")
 n_train = 10000
 
 start = time.time()
-for usage in range(5):
+for usage in range(1):
     for j in range(5):
         data = np.append((batch[j][b'data'] / 256), np.ones([10000, 1]), axis=1)
         label = batch[j][b'labels']

@@ -13,6 +13,7 @@ class FCLayer:
         self.s = np.zeros(self.o)  # s = w.dot(x)
         self.y = np.zeros(self.o)  # output
         self.dy = np.zeros(self.o)
+        print("--- FC Layer initialized as {} layer ---", self.act_fun)
 
     def train(self, data: np.ndarray):
         self.x = data
@@ -46,7 +47,7 @@ class FCLayer:
     def softmax(self):
         """softmax forward compute"""
         self.s = np.matmul(self.w, self.x)
-        s_exp = np.exp(self.s)
+        s_exp = np.exp(self.s - np.max(self.s))
         self.y = s_exp / np.sum(s_exp)
         return self.y
 
@@ -62,7 +63,7 @@ class FCLayer:
         ds = np.matmul(dy_ds, self.dy)
 
         dw = np.outer(ds, self.x)
-        dx = np.matmul(self.w.T, self.s)
+        dx = np.matmul(self.w.T, ds)
 
         self.w -= self.step * dw
         return dx
@@ -76,7 +77,7 @@ class FCLayer:
         ds *= dy
 
         dw = np.outer(ds, self.x)
-        dx = np.matmul(self.w.T, self.s)
+        dx = np.matmul(self.w.T, ds)
 
         self.w -= self.step * dw
         return dx
@@ -90,8 +91,9 @@ class FCLayer:
     def relu_bp(self):
         ds = np.ones_like(self.s)
         ds[self.s < 0] = 0
+        ds *= self.dy
         dw = np.outer(ds, self.x)
-        dx = np.matmul(self.w.T, self.s)
+        dx = np.matmul(self.w.T, ds)
 
         self.w -= self.step * dw
         return dx

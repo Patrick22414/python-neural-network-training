@@ -5,7 +5,7 @@ import time
 n_pixel = 3072
 n_mid = 100
 n_class = 10
-step_size = 1e-4
+step_size = 1e-3
 
 layer_1 = layer.FCLayer(n_pixel, n_mid, step_size, "Softmax")
 layer_2 = layer.FCLayer(n_mid, n_class, step_size, "Softmax loss")
@@ -20,7 +20,7 @@ n_train = 10000
 
 start = time.time()
 for usage in range(1):
-    for j in range(1):
+    for j in range(5):
         data = batch[j][b'data'] / 256
         label = batch[j][b'labels']
         for k in range(n_train):
@@ -28,6 +28,7 @@ for usage in range(1):
             res_from_l2 = layer_2.train(res_from_l1)
             grad_from_l2 = layer_2.backprop(label=label[k])
             grad_from_l1 = layer_1.backprop(upstream_grad=grad_from_l2)
+
 print("--- Training time: {0:.4f}s".format((time.time() - start)))
 
 batch_test = cifar_10.unpickle("test_batch")
@@ -42,5 +43,8 @@ for k in range(n_test):
     res_from_l2 = layer_2.predict(res_from_l1)
     if np.argmax(res_from_l2) == label_test[k]:
         n_bingo += 1
+
+print(layer_1.w)
+print(layer_2.w)
 print("--- Testing time: {0:.4f}s".format((time.time() - start)))
 print("--- Accuracy on test data: {}%".format(n_bingo * 100 / n_test))
