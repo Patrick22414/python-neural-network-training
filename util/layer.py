@@ -9,7 +9,7 @@ class FCLayer:
         self.act_fun = activation   # type of activation function
         self.step = step_size       # step size
 
-        self.w = np.zeros([self.o, self.i])     # weights matrix
+        self.w = np.random.rand(self.o, self.i)     # weights matrix
         self.x = np.zeros([self.i, self.n])     # input data
         self.s = np.zeros([self.o, self.n])     # s = w.dot(x)
         self.y = np.zeros([self.o, self.n])     # output
@@ -49,11 +49,12 @@ class FCLayer:
         if data is None:
             self.s = np.matmul(self.w, self.x)
             s_exp = np.exp(self.s - np.max(self.s, axis=0))
-            self.y = s_exp / np.sum(s_exp)
+            # s_exp = np.exp(self.s)
+            self.y = s_exp / np.sum(s_exp, axis=0)
         else:
             s = np.matmul(self.w, data)
             s_exp = np.exp(s - np.max(s, axis=0))
-            return s_exp / np.sum(s_exp)
+            return s_exp / np.sum(s_exp, axis=0)
 
     def softmax_bp(self):
         """softmax back-propagation"""
@@ -62,7 +63,7 @@ class FCLayer:
             dyds = - np.outer(self.y[:, k], self.y[:, k])
             dyds[np.diag_indices_from(dyds)] += self.y[:, k]
             ds[:, k] = np.matmul(dyds, self.dy[:, k])
-        ds[np.argmax(self.s, axis=0), :] = 0
+        # ds[np.argmax(self.s, axis=0), :] = 0
 
         dw = np.matmul(ds, self.x.T)
         self.dx = np.matmul(self.w.T, ds)

@@ -4,7 +4,7 @@ import time
 
 n_layer = 2
 scale = [3072, 128, 10]
-layer_type = ["ReLU", "Softmax"]
+layer_type = ["Softmax", "Softmax"]
 batch_size = 10000
 step_size = 1
 

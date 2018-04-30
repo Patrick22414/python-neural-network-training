@@ -7,11 +7,11 @@ class CrossEnt:
         self.step = step_size
         # self.w = np.random.rand(n_class, n_pixel)   # weight matrix ini as random
         self.w = np.zeros((n_class, n_pixel))  # weight matrix ini as 0
-        self.x = np.zeros(n_pixel)              # data vector
+        self.x = np.zeros(n_pixel)  # data vector
         self.label = 0  # correct label
-        self.s = np.zeros(n_class)              # scores vector
+        self.s = np.zeros(n_class)  # scores vector
         self.pr = np.zeros(n_class)  # probability of correct guess
-        self.L = 0.0                            # loss
+        self.L = 0.0  # loss
         print("--- CrossEnt initialized ---")
 
     def predict(self, data):
@@ -35,4 +35,4 @@ class CrossEnt:
 
         dw = np.outer(ds, self.x)
         self.w -= self.step * dw
-
+        print(dw)
