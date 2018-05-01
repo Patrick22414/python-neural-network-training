@@ -1,40 +1,87 @@
 import numpy as np
-from util import layer
 
 
-class SimpleNet:
-    def __init__(self, n_layer: int, layer_type: list, scale: list, batch_size, step_size):
-        self.n = n_layer
-        self.b = batch_size
-        self.La = [None] * n_layer  # FIXME I don't think this is a good way to init things
-        self.loss = np.zeros(batch_size)
-        self.downstream_result = [np.array([])] * n_layer
-        self.upstream_gradient = [np.array([])] * (n_layer+1)
-        for k in range(n_layer):
-            self.La[k] = layer.FCLayer(scale[k], scale[k+1], batch_size, step_size, layer_type[k])
-            self.downstream_result[k] = np.zeros([scale[k+1], batch_size])
-            self.upstream_gradient[k] = np.zeros([scale[k+1], batch_size])
-        self.upstream_gradient[-1] = np.zeros([scale[-1], batch_size])
-        print("--- Simple Net initialized with {} layer(s) ---".format(self.n))
+class TwoLayerNN:
+    """Simple 2-layer neural net consisting of a ReLU and a Softmax FC layer"""
 
-    def train(self, data_batch, label_batch):
-        # compute downstream
-        self.downstream_result[0] = self.La[0].train(data_batch)
-        for k in range(1, self.n):
-            self.downstream_result[k] = self.La[k].train(self.downstream_result[k-1])
+    def __init__(self, scale: tuple, batch_size, step_size, max_epoch, weights_init="Xavier"):
+        assert len(scale) == 3
 
-        # compute loss
-        self.loss = - np.log(self.downstream_result[-1][label_batch, np.arange(self.b)])
+        # hyper-parameters
+        self.Scale = scale
+        self.B = batch_size
+        self.Step = step_size
+        self.MaxEpoch = max_epoch
 
-        # compute back-propagation
-        self.upstream_gradient[-1].fill(0)
-        self.upstream_gradient[-1][label_batch, np.arange(self.b)] = -np.reciprocal(self.loss)
-        for k in range(self.n).__reversed__():
-            self.upstream_gradient[k] = self.La[k].backprop(self.upstream_gradient[k+1])
-        # print(self.upstream_gradient)
+        # learning parameters
+        self.w1 = self.w2 = np.array([])
 
-    def predict(self, data):
-        self.downstream_result[0] = self.La[0].predict(data)
-        for k in range(1, self.n):
-            self.downstream_result[k] = self.La[k].predict(self.downstream_result[k-1])
-        return self.downstream_result[-1]
+        # variables
+        self.x1 = self.s1 = self.x2 = self.s2 = self.y = np.array([])
+
+        # weights initialization
+        if weights_init == "Xavier":
+            self.w1 = np.random.randn(scale[0], scale[1]) / np.sqrt(scale[0])
+            self.w2 = np.random.randn(scale[1], scale[2]) / np.sqrt(scale[1])
+        elif weights_init == "Zeros":
+            self.w1 = np.zeros([scale[0], scale[1]])
+            self.w2 = np.zeros([scale[1], scale[2]])
+        elif weights_init == "Uniform":
+            self.w1 = 0.1 * np.random.rand(scale[0], scale[1])
+            self.w2 = 0.1 * np.random.rand(scale[1], scale[2])
+        else:
+            raise NotImplementedError
+
+    def predict(self, data: np.ndarray) -> np.ndarray:
+        assert data.shape[-1] == self.Scale[0]
+        return np.maximum(0, data @ self.w1) @ self.w2
+
+    def train(self, data: np.ndarray, labels: np.ndarray, babysitter=False):
+        assert data.shape == (self.B, self.Scale[0])
+        assert labels.shape == (self.B,)
+        self.x1 = data
+
+        epoch = 0
+        m1 = m2 = 0.0  # momentum
+        while epoch < self.MaxEpoch:
+            epoch += 1
+            self.s1 = self.x1 @ self.w1  # matrix scale: B-by-Sc[0] @ Sc[0]-by-Sc[1] -> B-by-Sc[1]
+            self.x2 = np.maximum(0, self.s1)
+            # self.x2 = self.s1
+            # self.x2[self.s1 < 0] *= 0.1
+            self.s2 = self.x2 @ self.w2  # matrix scale: B-by-Sc[1] @ Sc[1]-by-Sc[2] -> B-by-Sc[2]
+            exp_s2 = np.exp(self.s2)
+            self.y = exp_s2 / np.sum(exp_s2, axis=1)[:, np.newaxis]
+            answer = self.y[np.arange(self.B), labels]  # matrix scale B-by-Sc[2] -> B
+
+            # back-propagation
+            dldy = - np.reciprocal(answer) / self.B
+
+            dlds2 = - exp_s2 * answer[:, np.newaxis]
+            dlds2[np.arange(self.B), labels] += answer
+            dlds2 *= dldy[:, np.newaxis]
+
+            dldw2 = self.x2.T @ dlds2  # matrix scale: Sc[1]-by-B @ B-by-Sc[2] -> Sc[1]-by-Sc[2]
+            dldx2 = dlds2 @ self.w2.T  # matrix scale: B-by-Sc[2] @ Sc[2]-by-Sc[1] -> B-by-Sc[1]
+
+            dlds1 = dldx2
+            dlds1[self.s1 < 0] = 0
+            # dlds1[self.s1 < 0] *= 0.1
+
+            dldw1 = self.x1.T @ dlds1
+
+            m1 = 0.9 * m1 + dldw1
+            m2 = 0.9 * m2 + dldw2
+            self.w1 -= self.Step * m1
+            self.w2 -= self.Step * m2
+
+            if babysitter:
+                if epoch == self.MaxEpoch:  # comment this line to view all training process
+                    self.loss = np.mean(- np.log(answer))
+                    predicted_labels = np.argmax(self.s2, axis=1)
+                    validation = np.sum(predicted_labels == labels) / self.B
+                    print("epoch: {:2d}/{:2d}".format(epoch, self.MaxEpoch), end='\t')
+                    print("loss: {:4.2f}".format(self.loss), end='\t')
+                    print("validation: {:4.2f}".format(validation), end='\t')
+                    print("w1_step: {:8.2f}".format(np.square(np.sum(dldw1))), end='\t')
+                    print("w2_step: {:8.2f}".format(np.square(np.sum(dldw2))))

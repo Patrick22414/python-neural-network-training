@@ -1,6 +1,8 @@
-import numpy as np
-from util import cifar_10, fc_layer
 import time
+
+import numpy as np
+
+from util import cifar_10, fc_layer
 
 start = time.time()
 n_input = 3072
@@ -23,7 +25,7 @@ for k in range(200):
     sample = np.random.randint(50000, size=batch_size)
     data_batch = data[sample]
     label_batch = labels[sample]
-    layer.train(data_batch, label_batch, babysitter=False)  # turn babysitter True/False to view training process
+    layer.train(data_batch, label_batch, babysitter=True)  # turn babysitter True/False to view training process
 print("--- Training time:\t{:4.2f}s".format((time.time()-start)))
 
 # testing

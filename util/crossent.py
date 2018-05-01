@@ -1,3 +1,4 @@
+# WARNING! Obsolete codes. Check util/fc_layer instead
 # my implementation of cross-entropy loss
 import numpy as np
 

@@ -1,32 +1,46 @@
-import numpy as np
-from util import cifar_10, nets
 import time
 
-n_layer = 2
-scale = [3072, 128, 10]
-layer_type = ["Softmax", "Softmax"]
-batch_size = 10000
-step_size = 1
+import numpy as np
 
-net = nets.SimpleNet(n_layer, layer_type, scale, batch_size, step_size)
+from util import cifar_10, nets
 
-batch = [None] * 5
-batch[0] = cifar_10.unpickle("data_batch_1")
-batch[1] = cifar_10.unpickle("data_batch_2")
-batch[2] = cifar_10.unpickle("data_batch_3")
-batch[3] = cifar_10.unpickle("data_batch_4")
-batch[4] = cifar_10.unpickle("data_batch_5")
+# pre-processing
+start = time.time()
+data, labels = cifar_10.unpickle("all")
+data = data / 256
+data -= np.mean(data)
+print("--- Preparing time:\t{:4.2f}s".format(time.time() - start))
 
-for usage in range(10):
-    for j in range(5):
-        data = batch[j][b'data'] / 256
-        label = batch[j][b'labels']
-        net.train(data.T, label)
+scale = (3072, 100, 10)
+batch_size = 1000
+step_size = 0.05
+max_epoch = 10
 
-test_batch = cifar_10.unpickle("test_batch")
-test_data = test_batch[b'data'].T
-test_label = test_batch[b'labels']
+nn = nets.TwoLayerNN(scale, batch_size, step_size, max_epoch, weights_init="Xavier")
 
-result = np.argmax(net.predict(test_data), axis=0)
-n_bingo = np.sum(result == test_label)
-print("--- Accuracy on test data: {:.2f} %".format(n_bingo/100))
+# training
+start = time.time()
+for k in range(100):
+    sample = np.random.randint(50000, size=batch_size)
+    data_batch = data[sample]
+    label_batch = labels[sample]
+    nn.train(data_batch, label_batch, babysitter=True)  # turn babysitter True/False to view training process
+print("--- Training time:\t{:4.2f}s".format((time.time() - start)))
+
+# testing
+if True:
+    start = time.time()
+    batch_test = cifar_10.unpickle("test_batch")
+    data_test = batch_test[b'data'] / 256
+    data_test -= np.mean(data_test)
+    label_test = batch_test[b'labels']
+    n_bingo = 0
+    n_test = 10000
+
+    for k in range(n_test):
+        scores = nn.predict(data_test[k])
+        if np.argmax(scores) == label_test[k]:
+            n_bingo += 1
+
+    print("--- Testing time:\t{:4.2f}s".format((time.time() - start)))
+    print("--- Accuracy on test data: {}%".format(n_bingo * 100 / n_test))
